@@ -27,9 +27,9 @@ RUN pnpm deploy --filter=@imput/cobalt-api --prod /prod/api
 FROM base AS api
 WORKDIR /app
 
-COPY --from=build --chown=node:node /prod/api /app
-
-USER node
+COPY --from=build /prod/api /app
 
 EXPOSE 9000
-CMD ["node", "dist/index.js"]
+
+# ✅ IMPORTANT: let the package decide entrypoint
+CMD ["npm", "start"]
