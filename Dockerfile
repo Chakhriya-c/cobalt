@@ -1,26 +1,35 @@
-FROM node:24-alpine AS base
+FROM node:20-slim AS base
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
+# --------------------
+# Build stage
+# --------------------
 FROM base AS build
 WORKDIR /app
-COPY . /app
+
+COPY . .
 
 RUN corepack enable
-RUN apk add --no-cache python3 alpine-sdk
+RUN apt-get update && apt-get install -y \
+    python3 \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --prod --frozen-lockfile
+    pnpm install --frozen-lockfile
 
 RUN pnpm deploy --filter=@imput/cobalt-api --prod /prod/api
 
+# --------------------
+# Runtime stage
+# --------------------
 FROM base AS api
 WORKDIR /app
 
 COPY --from=build --chown=node:node /prod/api /app
-COPY --from=build --chown=node:node /app/.git /app/.git
 
 USER node
 
 EXPOSE 9000
-CMD [ "node", "src/cobalt" ]
+CMD ["node", "dist/index.js"]
